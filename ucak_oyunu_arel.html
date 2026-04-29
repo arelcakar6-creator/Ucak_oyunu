@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uçak Oyunu - Arel</title>
+
+<style>
+body { margin:0; overflow:hidden; font-family:Arial; }
+
+#menu, #gameOver {
+    position:absolute;
+    width:100%; height:100%;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    background:linear-gradient(#1e3c72,#2a5298);
+    color:white;
+}
+
+#gameOver { display:none; }
+
+button {
+    padding:15px 30px;
+    font-size:20px;
+    border:none;
+    border-radius:10px;
+    background:orange;
+    color:white;
+}
+
+canvas { display:none; }
+
+#mobileControls {
+    position:absolute;
+    bottom:20px;
+    width:100%;
+    display:none;
+    justify-content:space-around;
+}
+
+.btn {
+    background:rgba(0,0,0,0.5);
+    color:white;
+    padding:20px;
+    border-radius:50%;
+    font-size:20px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="menu">
+    <h1>UÇAK SÜR</h1>
+    <p>by Arel ✈️</p>
+    <button onclick="startGame()">OYNA</button>
+</div>
+
+<div id="gameOver">
+    <h1>KAYBETTİN!</h1>
+    <p id="scoreText"></p>
+    <button onclick="location.reload()">TEKRAR OYNA</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<div id="mobileControls">
+    <div class="btn" id="left">◀</div>
+    <div class="btn" id="shoot">🔥</div>
+    <div class="btn" id="right">▶</div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+let player, bullets, enemies, keys, score, gameRunning;
+
+function startGame() {
+    document.getElementById("menu").style.display = "none";
+    canvas.style.display = "block";
+
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+        document.getElementById("mobileControls").style.display = "flex";
+    }
+
+    player = { x: canvas.width/2, y: canvas.height-80, size:20, speed:6 };
+    bullets = [];
+    enemies = [];
+    keys = {};
+    score = 0;
+    gameRunning = true;
+
+    setInterval(spawnEnemy, 1800);
+
+    loop();
+}
+
+function spawnEnemy() {
+    if (!gameRunning) return;
+    enemies.push({
+        x: Math.random()*canvas.width,
+        y: -20,
+        size:20,
+        speed: 1.3,
+        hp: 3
+    });
+}
+
+document.addEventListener("keydown", e => keys[e.key]=true);
+document.addEventListener("keyup", e => keys[e.key]=false);
+
+function shoot() {
+    bullets.push({ x: player.x, y: player.y, speed:7 });
+}
+
+document.addEventListener("keydown", e => {
+    if (e.code === "Space") shoot();
+});
+
+document.getElementById("left").ontouchstart = ()=>keys["ArrowLeft"]=true;
+document.getElementById("left").ontouchend = ()=>keys["ArrowLeft"]=false;
+
+document.getElementById("right").ontouchstart = ()=>keys["ArrowRight"]=true;
+document.getElementById("right").ontouchend = ()=>keys["ArrowRight"]=false;
+
+document.getElementById("shoot").ontouchstart = shoot;
+
+function update() {
+    if (keys["ArrowLeft"]) player.x -= player.speed;
+    if (keys["ArrowRight"]) player.x += player.speed;
+
+    bullets.forEach(b => b.y -= b.speed);
+    enemies.forEach(e => e.y += e.speed);
+
+    enemies.forEach(e => {
+        if (Math.abs(e.x - player.x) < 20 && Math.abs(e.y - player.y) < 20) {
+            endGame();
+        }
+    });
+
+    bullets.forEach((b, bi) => {
+        enemies.forEach((e, ei) => {
+            if (Math.abs(b.x - e.x) < 15 && Math.abs(b.y - e.y) < 15) {
+                e.hp--;
+                bullets.splice(bi,1);
+
+                if (e.hp <= 0) {
+                    enemies.splice(ei,1);
+                    score++;
+                }
+            }
+        });
+    });
+}
+
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle="red";
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(player.x-15, player.y+30);
+    ctx.lineTo(player.x+15, player.y+30);
+    ctx.fill();
+
+    ctx.fillStyle="yellow";
+    bullets.forEach(b => ctx.fillRect(b.x-2, b.y, 4, 10));
+
+    ctx.fillStyle="black";
+    enemies.forEach(e => ctx.fillRect(e.x-10, e.y-10, 20, 20));
+
+    ctx.fillStyle="black";
+    ctx.fillText("Skor: "+score, 20, 30);
+}
+
+function loop() {
+    if (!gameRunning) return;
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+function endGame() {
+    gameRunning = false;
+    canvas.style.display="none";
+    document.getElementById("gameOver").style.display="flex";
+    document.getElementById("scoreText").innerText = "Skorun: " + score;
+}
+</script>
+
+</body>
+</html>
